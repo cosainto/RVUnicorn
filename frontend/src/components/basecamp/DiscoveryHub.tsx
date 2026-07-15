@@ -287,6 +287,9 @@ export default function DiscoveryHub() {
           }
           const totalCount = allStops.length;
 
+          const now = Date.now();
+          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
           return (
             <div style={{
               margin: 0,
@@ -294,64 +297,96 @@ export default function DiscoveryHub() {
               boxShadow: `4px 4px 0px ${CN.deep}`,
               background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(45,27,78,0.06) 100%)`,
               overflow: 'hidden',
-              transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `5px 6px 0px ${CN.deep}`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `4px 4px 0px ${CN.deep}`; }}>
-              {/* Header row */}
-              <div style={{ display: 'flex', gap: 12, padding: 12 }}>
-                {/* Genie tile */}
-                <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden',
-                  background: `linear-gradient(135deg, ${CN.deep} 0%, #2D1B4E 50%, ${CN.navy} 100%)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
-                    style={{ width: '70%', height: '70%', objectFit: 'contain', animation: 'genie-float 3.5s ease-in-out infinite' }} />
-                </div>
-                {/* Title + count */}
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 700, color: CN.cream }}>My Wishlist</h4>
-                  <p style={{ fontSize: 11, color: CN.muted, marginTop: 2 }}>
-                    {totalCount} place{totalCount !== 1 ? 's are' : ' is'} waiting for your next adventure
-                  </p>
-                </div>
-                {/* View all CTA */}
-                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                  <Link to="/trips?filter=dream" style={{ fontSize: 11, fontWeight: 700, color: CN.gold, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    View Wishlist →
-                  </Link>
-                </div>
+            }}>
+              {/* Compact header — mascot as supporting brand element */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', position: 'relative' }}>
+                <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, flex: 1 }}>
+                  ✨ My Wishlist
+                  <span style={{ fontSize: 11, fontWeight: 500, color: CN.muted, marginLeft: 6 }}>
+                    {totalCount} place{totalCount !== 1 ? 's' : ''}
+                  </span>
+                </h4>
+                <Link to="/trips?filter=dream" style={{ fontSize: 10, fontWeight: 700, color: CN.gold, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  View all →
+                </Link>
+                {/* Genie mascot — supporting corner position */}
+                <img src="/images/genie-full-v2.png" alt="" className="genie-float-anim"
+                  style={{ position: 'absolute', right: 50, top: -2, width: 40, height: 40, objectFit: 'contain', opacity: 0.25,
+                    animation: 'genie-float 3.5s ease-in-out infinite', pointerEvents: 'none' }} />
               </div>
 
-              {/* Thumbnail row */}
+              {/* Gallery tiles — the dominant element */}
               {totalCount > 0 && (
-                <div style={{ display: 'flex', gap: 8, padding: '0 12px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                  {allStops.slice(0, 6).map((stop: any, i: number) => {
+                <div style={{
+                  display: 'flex', gap: 10, padding: '0 12px 12px',
+                  overflowX: 'auto', scrollbarWidth: 'none',
+                  WebkitOverflowScrolling: 'touch',
+                }}>
+                  {allStops.slice(0, 5).map((stop: any, i: number) => {
                     const target = stop.campground || stop.place;
                     const img = target?.imageUrl || target?.websiteImageUrl;
                     const name = target?.name || stop.name || 'Place';
+                    const location = [target?.city, target?.state].filter(Boolean).join(', ');
+                    const rating = target?.googleRating;
                     const tripFirstStop = stop._tripStops?.[0];
                     const href = tripFirstStop?.id ? `/trips/${tripFirstStop.id}` : '/trips?filter=dream';
+                    const isNew = stop.createdAt && (now - new Date(stop.createdAt).getTime()) < sevenDaysMs;
+                    const category = target?.category || (stop.campgroundId ? 'CAMPGROUND' : 'OTHER');
+                    const catMeta = CATEGORY_META[category] || CATEGORY_META.OTHER;
+
                     return (
-                      <Link key={i} to={href} style={{ flexShrink: 0, textDecoration: 'none', textAlign: 'center', width: 64 }}>
-                        <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', margin: '0 auto',
-                          border: `2px solid ${CN.border}` }}>
+                      <Link key={i} to={href} className="group" style={{
+                        flexShrink: 0, width: 130, textDecoration: 'none',
+                        transition: 'transform 0.2s ease',
+                      }}>
+                        {/* Image tile */}
+                        <div style={{
+                          width: 130, height: 90, borderRadius: 10, overflow: 'hidden', position: 'relative',
+                          border: `2px solid ${CN.border}`,
+                          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.3)`; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
                           {img ? (
                             <img src={img} alt={name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
-                            <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep}, #2D1B4E)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <MapPin style={{ width: 16, height: 16, color: CN.border }} />
+                            <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep}, #2D1B4E)`,
+                              border: `1px solid ${CN.border}`, borderRadius: 8,
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                              <span style={{ fontSize: 24 }}>{catMeta.emoji}</span>
+                              <span style={{ fontSize: 8, color: CN.muted }}>{catMeta.label}</span>
                             </div>
                           )}
+                          {/* New badge */}
+                          {isNew && (
+                            <span style={{ position: 'absolute', top: 4, left: 4, fontSize: 8, fontWeight: 700,
+                              padding: '1px 5px', borderRadius: 4, background: CN.gold, color: CN.deep }}>New</span>
+                          )}
                         </div>
-                        <p style={{ fontSize: 9, color: CN.muted, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+                        {/* Info below tile */}
+                        <p style={{ fontSize: 11, fontWeight: 600, color: CN.cream, marginTop: 4,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}>
+                          {location && <span style={{ fontSize: 9, color: CN.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{location}</span>}
+                          {rating && (
+                            <span style={{ fontSize: 9, fontWeight: 700, color: CN.gold, flexShrink: 0 }}>
+                              <Star style={{ width: 9, height: 9, display: 'inline', verticalAlign: 'middle', fill: CN.gold, color: CN.gold }} /> {rating}
+                            </span>
+                          )}
+                        </div>
                       </Link>
                     );
                   })}
-                  {totalCount > 6 && (
-                    <Link to="/trips?filter=dream" style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 10,
-                      background: CN.navyLight, border: `2px solid ${CN.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      textDecoration: 'none', margin: '0 auto' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: CN.muted }}>+{totalCount - 6}</span>
+                  {/* +N more tile */}
+                  {totalCount > 5 && (
+                    <Link to="/trips?filter=dream" style={{
+                      flexShrink: 0, width: 130, height: 90, borderRadius: 10,
+                      background: CN.navyLight, border: `2px solid ${CN.border}`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      textDecoration: 'none', gap: 4,
+                    }}>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: CN.muted }}>+{totalCount - 5}</span>
+                      <span style={{ fontSize: 9, color: CN.muted }}>more places</span>
                     </Link>
                   )}
                 </div>
