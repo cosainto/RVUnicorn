@@ -369,7 +369,7 @@ export default function DiscoveryHub() {
                     overflowX: 'auto', scrollbarWidth: 'none',
                     WebkitOverflowScrolling: 'touch',
                   }}>
-                  {allStops.filter((s: any) => !removedIds.has(s.id) && !removedIds.has(s.campground?.id || s.place?.id || s.id)).slice(0, 5).map((stop: any, i: number) => {
+                  {allStops.filter((s: any) => !removedIds.has(s.id) && !removedIds.has(s.campground?.id || s.place?.id || s.id)).slice(0, 4).map((stop: any, i: number) => {
                     const target = stop.campground || stop.place;
                     const img = target?.imageUrl || target?.websiteImageUrl;
                     const name = target?.name || stop.name || 'Place';
@@ -393,12 +393,12 @@ export default function DiscoveryHub() {
 
                     return (
                       <Link key={i} to={href} className="group" style={{
-                        flexShrink: 0, width: 130, textDecoration: 'none',
+                        flexShrink: 0, width: 180, textDecoration: 'none',
                         transition: 'transform 0.2s ease',
                       }}>
                         {/* Image tile */}
                         <div style={{
-                          width: 130, height: 90, borderRadius: 10, overflow: 'hidden', position: 'relative',
+                          width: 180, height: 135, borderRadius: 10, overflow: 'hidden', position: 'relative',
                           border: `2px solid ${CN.border}`,
                           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                         }}
@@ -456,14 +456,14 @@ export default function DiscoveryHub() {
                     );
                   })}
                   {/* +N more tile */}
-                  {totalCount > 5 && (
+                  {totalCount > 4 && (
                     <Link to="/trips?filter=dream" style={{
-                      flexShrink: 0, width: 130, height: 90, borderRadius: 10,
+                      flexShrink: 0, width: 180, height: 135, borderRadius: 10,
                       background: CN.navyLight, border: `2px solid ${CN.border}`,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                       textDecoration: 'none', gap: 4,
                     }}>
-                      <span style={{ fontSize: 18, fontWeight: 700, color: CN.muted }}>+{totalCount - 5}</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: CN.muted }}>+{totalCount - 4}</span>
                       <span style={{ fontSize: 9, color: CN.muted }}>more places</span>
                     </Link>
                   )}
@@ -575,9 +575,9 @@ export default function DiscoveryHub() {
                   <>
                     {/* Featured Recipe of the Day — first tile, badged */}
                     {campKitchen.featured && (
-                      <Link to={`/recipes/${campKitchen.featured.id}`} className="group" style={{ flexShrink: 0, width: 130, textDecoration: 'none' }}>
+                      <Link to={`/recipes/${campKitchen.featured.id}`} className="group" style={{ flexShrink: 0, width: 180, textDecoration: 'none' }}>
                         <div style={{
-                          width: 130, height: 90, borderRadius: 10, overflow: 'hidden', position: 'relative',
+                          width: 180, height: 135, borderRadius: 10, overflow: 'hidden', position: 'relative',
                           border: `2px solid ${CN.orange}`,
                           transition: 'transform 0.2s ease',
                         }}
@@ -598,8 +598,8 @@ export default function DiscoveryHub() {
                     )}
                     {/* Random editorial picks */}
                     {(campKitchen.explore || []).map((r: any) => (
-                      <Link key={r.id} to={`/recipes/${r.id}`} className="group" style={{ flexShrink: 0, width: 130, textDecoration: 'none' }}>
-                        <div style={{ width: 130, height: 90, borderRadius: 10, overflow: 'hidden', border: `2px solid ${CN.border}`, transition: 'transform 0.2s ease' }}
+                      <Link key={r.id} to={`/recipes/${r.id}`} className="group" style={{ flexShrink: 0, width: 180, textDecoration: 'none' }}>
+                        <div style={{ width: 180, height: 135, borderRadius: 10, overflow: 'hidden', border: `2px solid ${CN.border}`, transition: 'transform 0.2s ease' }}
                           onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
                           onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
                           {r.imageUrl ? (
@@ -620,9 +620,9 @@ export default function DiscoveryHub() {
                     {/* My saved recipes */}
                     {(campKitchen.saved || []).length > 0 ? (
                       <>
-                        {(campKitchen.saved || []).slice(0, 5).map((r: any) => (
-                          <Link key={r.id} to={`/recipes/${r.id}`} className="group" style={{ flexShrink: 0, width: 130, textDecoration: 'none' }}>
-                            <div style={{ width: 130, height: 90, borderRadius: 10, overflow: 'hidden', border: `2px solid ${CN.border}`, transition: 'transform 0.2s ease' }}
+                        {(campKitchen.saved || []).slice(0, 4).map((r: any) => (
+                          <Link key={r.id} to={`/recipes/${r.id}`} className="group" style={{ flexShrink: 0, width: 180, textDecoration: 'none' }}>
+                            <div style={{ width: 180, height: 135, borderRadius: 10, overflow: 'hidden', border: `2px solid ${CN.border}`, transition: 'transform 0.2s ease' }}
                               onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
                               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
                               {r.imageUrl ? (
@@ -637,9 +637,9 @@ export default function DiscoveryHub() {
                             <span style={{ fontSize: 9, color: CN.muted }}>{r.cookTime > 0 ? `⏱ ${r.cookTime} min` : '⏱ No cook'}</span>
                           </Link>
                         ))}
-                        {(campKitchen.saved || []).length > 5 && (
-                          <Link to="/recipes?tab=saved" style={{ flexShrink: 0, width: 130, height: 90, borderRadius: 10, background: CN.navyLight, border: `2px solid ${CN.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', gap: 4 }}>
-                            <span style={{ fontSize: 18, fontWeight: 700, color: CN.muted }}>+{(campKitchen.saved || []).length - 5}</span>
+                        {(campKitchen.saved || []).length > 4 && (
+                          <Link to="/recipes?tab=saved" style={{ flexShrink: 0, width: 180, height: 135, borderRadius: 10, background: CN.navyLight, border: `2px solid ${CN.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', gap: 4 }}>
+                            <span style={{ fontSize: 18, fontWeight: 700, color: CN.muted }}>+{(campKitchen.saved || []).length - 4}</span>
                             <span style={{ fontSize: 9, color: CN.muted }}>more saved</span>
                           </Link>
                         )}
