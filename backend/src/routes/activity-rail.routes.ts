@@ -414,4 +414,184 @@ export function pushActivityRailUpdate(userId: string, item: any) {
   }
 }
 
+// ── GET /social-pins — map overlay pin data ──────────────────────────────────
+
+router.get('/social-pins', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.userId;
+
+    // Get mutual friends
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          { initiatorId: userId, status: 'ACCEPTED' },
+          { receiverId: userId, status: 'ACCEPTED' },
+        ],
+      },
+      select: { initiatorId: true, receiverId: true },
+    });
+    const friendIds = friendships.map((f: any) =>
+      f.initiatorId === userId ? f.receiverId : f.initiatorId
+    );
+
+    if (friendIds.length === 0) {
+      return res.json({ pins: [], cards: [] });
+    }
+
+    // Get friend user info + their locationSharing setting
+    const friends = await prisma.user.findMany({
+      where: { id: { in: friendIds } },
+      select: { id: true, firstName: true, lastName: true, username: true, profilePicture: true, locationSharing: true, showCampingStatus: true },
+    });
+    const friendMap = new Map(friends.map((f: any) => [f.id, f]));
+
+    // Fetch recent friend activity (last 7 days) with location data
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [checkIns, photos, rigPosts] = await Promise.all([
+      // Friend check-ins with campground location
+      prisma.checkIn.findMany({
+        where: {
+          userId: { in: friendIds },
+          checkInDate: { gte: sevenDaysAgo },
+          campgroundId: { not: null },
+        },
+        include: {
+          campground: { select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true, imageUrl: true } },
+          user: { select: { id: true, firstName: true, profilePicture: true } },
+        },
+        orderBy: { checkInDate: 'desc' },
+        take: 30,
+      }),
+
+      // Friend photos with location (via place or event->campground)
+      prisma.photo.findMany({
+        where: {
+          userId: { in: friendIds },
+          createdAt: { gte: sevenDaysAgo },
+          visibility: { not: 'PRIVATE' },
+          OR: [
+            { placeId: { not: null } },
+            { campgroundId: { not: null } },
+            { latitude: { not: null } },
+          ],
+        },
+        select: {
+          id: true, userId: true, imageUrl: true, caption: true, createdAt: true,
+          latitude: true, longitude: true, locationSharing: true,
+          placeId: true, campgroundId: true,
+          place: { select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true } },
+          campgroundRef: { select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true } },
+          user: { select: { id: true, firstName: true, profilePicture: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+      }),
+
+      // Rig posts from followed rigs
+      prisma.rigPost.findMany({
+        where: {
+          userId: { in: friendIds },
+          createdAt: { gte: sevenDaysAgo },
+          isPublic: true,
+          placeId: { not: null },
+        },
+        select: {
+          id: true, userId: true, photos: true, title: true, body: true, createdAt: true,
+          latitude: true, longitude: true,
+          placeId: true,
+          place: { select: { id: true, name: true, city: true, state: true, latitude: true, longitude: true } },
+          author: { select: { id: true, firstName: true, profilePicture: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+    ]);
+
+    // Build pins and cards, respecting locationSharing
+    const pins: any[] = [];
+    const cards: any[] = [];
+
+    for (const ci of checkIns) {
+      const friend = friendMap.get(ci.userId);
+      if (!friend?.showCampingStatus) continue;
+      const isFuzzy = friend?.locationSharing === 'fuzzy';
+
+      const pin = {
+        id: `checkin-${ci.id}`,
+        type: 'checkin',
+        lat: isFuzzy ? null : ci.campground?.latitude,
+        lng: isFuzzy ? null : ci.campground?.longitude,
+        state: ci.campground?.state,
+        isFuzzy,
+        actor: { id: friend.id, name: friend.firstName, avatar: friend.profilePicture },
+        placeName: ci.campground?.name,
+        placeId: ci.campgroundId,
+      };
+      pins.push(pin);
+
+      cards.push({
+        id: pin.id,
+        type: 'friend_upload',
+        actor: pin.actor,
+        placeName: ci.campground?.name,
+        placeCity: ci.campground?.city,
+        placeState: ci.campground?.state,
+        imageUrl: ci.campground?.imageUrl,
+        description: `checked in at ${ci.campground?.name}`,
+        occurredAt: ci.checkInDate,
+        isFuzzy,
+        lat: pin.lat,
+        lng: pin.lng,
+      });
+    }
+
+    for (const photo of photos) {
+      const friend = friendMap.get(photo.userId);
+      if (!friend) continue;
+      const postSharing = photo.locationSharing === 'inherit' ? friend.locationSharing : photo.locationSharing;
+      if (postSharing === 'hidden') continue;
+      const isFuzzy = postSharing === 'fuzzy';
+
+      const target = photo.campgroundRef || photo.place;
+      const lat = isFuzzy ? null : (photo.latitude || target?.latitude);
+      const lng = isFuzzy ? null : (photo.longitude || target?.longitude);
+
+      pins.push({
+        id: `photo-${photo.id}`,
+        type: 'photo',
+        lat, lng,
+        state: target?.state,
+        isFuzzy,
+        actor: { id: friend.id, name: friend.firstName, avatar: friend.profilePicture },
+        placeName: target?.name,
+        imageUrl: photo.imageUrl,
+      });
+
+      cards.push({
+        id: `photo-${photo.id}`,
+        type: 'friend_upload',
+        actor: { id: friend.id, name: friend.firstName, avatar: friend.profilePicture },
+        placeName: target?.name,
+        placeCity: target?.city,
+        placeState: target?.state,
+        imageUrl: photo.imageUrl,
+        description: `shared a photo${target?.name ? ' at ' + target.name : ''}`,
+        occurredAt: photo.createdAt,
+        isFuzzy,
+        lat, lng,
+      });
+    }
+
+    // Cap at 50 items
+    res.json({
+      pins: pins.slice(0, 50),
+      cards: cards.slice(0, 50),
+    });
+  } catch (e: any) {
+    console.error('[SocialPins] error:', e.message);
+    res.status(500).json({ error: 'Failed to fetch social pins' });
+  }
+});
+
 export default router;

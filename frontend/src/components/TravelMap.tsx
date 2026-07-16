@@ -241,6 +241,24 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
   const [upcomingTrips, setUpcomingTrips] = useState<any[]>([]);
   const [activeRoute, setActiveRoute] = useState<any>(null);
   const [friendsCheckins, setFriendsCheckins] = useState<any[]>([]);
+  const [socialPins, setSocialPins] = useState<any[]>([]);
+  const [socialCards, setSocialCards] = useState<any[]>([]);
+
+  // Load social pins for the overlay
+  useEffect(() => {
+    if (!socialMode) return;
+    const loadSocialPins = () => {
+      api.get('/map/activity-rail/social-pins')
+        .then(r => {
+          setSocialPins(r.data?.pins || []);
+          setSocialCards(r.data?.cards || []);
+        })
+        .catch(() => {});
+    };
+    loadSocialPins();
+    const interval = setInterval(loadSocialPins, 60000); // refresh every 60s
+    return () => clearInterval(interval);
+  }, [socialMode]);
 
   // Activity Rail state
   const [selectedRailItem, setSelectedRailItem] = useState<ActivityRailItem | null>(null);
@@ -997,6 +1015,15 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
         departureDate: t.departureDate,
         user: { id: '', username: t.ownerUsername, firstName: t.ownerFirstName, profilePicture: t.ownerAvatarUrl },
       })) : []),
+    // Social activity overlay pins (from /social-pins endpoint)
+    ...socialPins.filter((p: any) => p.lat && p.lng && !p.isFuzzy).map((p: any) => ({
+      id: p.id,
+      name: `${p.actor?.name || 'Friend'} at ${p.placeName || 'a place'}`,
+      latitude: p.lat as number,
+      longitude: p.lng as number,
+      type: 'friendCheckin' as const, // Reuse friendCheckin type for avatar pin rendering
+      user: p.actor ? { id: p.actor.id, username: '', firstName: p.actor.name, profilePicture: p.actor.avatar } : undefined,
+    })),
     // Home location marker
     ...(homeLocation ? [{
       id: 'home-location',
@@ -1248,6 +1275,15 @@ export default function TravelMap({ userId, isOwnProfile, compact = false, showT
               if (cgId && marker.user?.id) {
                 api.get(`/rigs/photos-at-campground/${cgId}/${marker.user.id}`).then(r => setPinAlbumData(r.data)).catch(() => {});
               }
+            } else if (marker.type === 'socialPin') {
+              // Social overlay pin — focus the sidebar on this item
+              setSelectedRailItem({
+                id: marker.id, type: 'PHOTO', actorId: marker.user?.id || '', actorName: marker.user?.name || '',
+                actorAvatarUrl: marker.user?.avatar || '', actorRigName: null, previewImageUrl: marker.imageUrl || '',
+                campgroundId: null, campgroundName: marker.name, campgroundLat: marker.latitude, campgroundLng: marker.longitude,
+                campgroundState: null, description: marker.name, occurredAt: '', timeAgo: '', ringColor: '#C9A84C', navigateTo: '',
+              });
+              setShowPreviewCard(true);
             } else if (marker.type === 'recentAlbum' && marker.albumId) {
               navigate(`/albums/${marker.albumId}`);
             } else if (marker.type === 'upcomingFriendTrip' && marker.tripId) {

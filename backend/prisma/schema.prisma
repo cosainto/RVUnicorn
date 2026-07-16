@@ -50,6 +50,7 @@ model User {
   rvSleeps                                        Int?
   rvSlideouts                                     Int?
   showCampingStatus                               Boolean                       @default(true)
+  locationSharing                                 String                        @default("fuzzy") // exact | fuzzy
   isSystem                                        Boolean                       @default(false)
   lastActiveAt                                    DateTime?
   creatorBio                                      String?
@@ -697,6 +698,7 @@ model Campground {
   campgroundEvents       CampgroundEvent[]
   followers              CampgroundFollow[]
   photos                 CampgroundPhoto[]
+  taggedPhotos           Photo[]                @relation("PhotoCampground")
   posts                  CampgroundPost[]
   reviews                CampgroundReview[]
   thingsToDo             CampgroundThingToDo[]
@@ -1126,6 +1128,10 @@ model Photo {
   updatedAt      DateTime             @updatedAt
   eventId        String?
   placeId        String?
+  campgroundId   String?
+  latitude       Float?
+  longitude      Float?
+  locationSharing String?              @default("inherit") // inherit | exact | fuzzy | hidden
   visibility     String               @default("PUBLIC")
   isPrivate      Boolean              @default(false)
   surfaces       String[]             @default(["PROFILE", "RIG", "TRIP", "CAMPGROUND"])
@@ -1134,6 +1140,7 @@ model Photo {
   album          PhotoAlbum?          @relation(fields: [albumId], references: [id])
   event          Event?               @relation(fields: [eventId], references: [id])
   place          Place?               @relation("PhotoPlace", fields: [placeId], references: [id])
+  campgroundRef  Campground?          @relation("PhotoCampground", fields: [campgroundId], references: [id])
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   campgroundTags PhotoCampgroundTag[]
   photoComments  PhotoComment[]
@@ -1148,6 +1155,8 @@ model Photo {
   @@index([albumId])
   @@index([eventId])
   @@index([placeId])
+  @@index([campgroundId])
+  @@index([latitude, longitude])
   @@index([visibility])
 }
 
@@ -6559,6 +6568,8 @@ model RigPost {
   visibility     String          @default("PUBLIC")  // PUBLIC | FRIENDS_ONLY | BOTH
   showOnProfile  Boolean         @default(true)
   showOnRigFeed  Boolean         @default(true)
+  latitude       Float?
+  longitude      Float?
   createdAt      DateTime        @default(now())
   rig            Rig             @relation(fields: [rigId], references: [id], onDelete: Cascade)
   author         User            @relation("RigPostAuthor", fields: [userId], references: [id], onDelete: Cascade)
