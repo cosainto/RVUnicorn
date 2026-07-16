@@ -42,6 +42,96 @@ const TYPE_EMOJI: Record<string, string> = {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
+// ── Own-content fallback when no friend activity ────────────────────────────
+function OwnContentRail({ onItemClick, selectedItemId }: ActivityRailProps) {
+  const [wishlistStops, setWishlistStops] = useState<any[]>([]);
+  const [recentVisits, setRecentVisits] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/dream-trips/stops').catch(() => ({ data: [] })),
+      api.get('/basecamp/v2/discovery').catch(() => ({ data: {} })),
+    ]).then(([stopsRes, discoveryRes]) => {
+      setWishlistStops(Array.isArray(stopsRes.data) ? stopsRes.data.slice(0, 4) : []);
+      // Extract recent visits from becauseYouVisited source campground
+      const bvItems = discoveryRes.data?.becauseYouVisited?.items || [];
+      setRecentVisits(bvItems.slice(0, 3));
+      setLoaded(true);
+    });
+  }, []);
+
+  // Nothing to show — collapse entirely, map goes full width
+  if (loaded && wishlistStops.length === 0 && recentVisits.length === 0) return null;
+  if (!loaded) return null;
+
+  return (
+    <>
+      {/* Desktop vertical sidebar */}
+      <div className="hidden md:flex flex-shrink-0 flex-col" style={{
+        width: 160, background: 'rgba(15, 28, 53, 0.95)',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+        padding: '12px 8px', overflowY: 'auto',
+      }}>
+        {wishlistStops.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#C9A84C', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>⭐ Your Wishlist</p>
+            {wishlistStops.map((stop: any) => {
+              const img = stop.imageUrl;
+              return (
+                <button key={stop.id} onClick={() => onItemClick({
+                  id: stop.id, type: 'CHECKIN', actorId: '', actorName: '', actorAvatarUrl: '', actorRigName: null,
+                  previewImageUrl: img || '', campgroundId: stop.id, campgroundName: stop.name,
+                  campgroundLat: null, campgroundLng: null, campgroundState: stop.state,
+                  description: stop.name, occurredAt: '', timeAgo: '', ringColor: '#C9A84C',
+                  navigateTo: stop.type === 'campground' ? `/campgrounds/${stop.id}` : `/place/${stop.id}`,
+                })}
+                  className="w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg transition hover:bg-white/5 text-left"
+                  style={{ border: selectedItemId === stop.id ? '1px solid #C9A84C' : '1px solid transparent' }}>
+                  {img ? (
+                    <img src={img} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B' }}>
+                      <span style={{ fontSize: 12 }}>🏕</span>
+                    </div>
+                  )}
+                  <span className="text-[9px] leading-tight truncate" style={{ color: '#F5F0E8' }}>{stop.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {recentVisits.length > 0 && (
+          <div>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>📍 Recently Visited</p>
+            {recentVisits.map((v: any) => (
+              <button key={v.id} onClick={() => onItemClick({
+                id: v.id, type: 'CHECKIN', actorId: '', actorName: '', actorAvatarUrl: '', actorRigName: null,
+                previewImageUrl: v.imageUrl || '', campgroundId: v.id, campgroundName: v.name,
+                campgroundLat: null, campgroundLng: null, campgroundState: v.state,
+                description: v.name, occurredAt: '', timeAgo: '', ringColor: '#1D9E75',
+                navigateTo: `/campgrounds/${v.id}`,
+              })}
+                className="w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg transition hover:bg-white/5 text-left"
+                style={{ border: selectedItemId === v.id ? '1px solid #1D9E75' : '1px solid transparent' }}>
+                {v.imageUrl ? (
+                  <img src={v.imageUrl} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ background: '#1B2B4B' }}>
+                    <span style={{ fontSize: 12 }}>📍</span>
+                  </div>
+                )}
+                <span className="text-[9px] leading-tight truncate" style={{ color: '#F5F0E8' }}>{v.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Mobile: collapsed — no sidebar on mobile for own content */}
+    </>
+  );
+}
+
 export default function ActivityRail({ onItemClick, selectedItemId }: ActivityRailProps) {
   const [items, setItems] = useState<ActivityRailItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,43 +242,9 @@ export default function ActivityRail({ onItemClick, selectedItemId }: ActivityRa
   if (!hasData && !hasNetwork) return null; // No friends at all — hide rail entirely
 
   // Has friends but no recent activity — show "quiet" prompt
-  if (!hasData && hasNetwork) {
-    return (
-      <>
-        <div
-          className="hidden md:flex flex-shrink-0 flex-col items-center justify-center"
-          style={{
-            width: 120,
-            background: 'rgba(15, 28, 53, 0.95)',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            padding: '20px 10px',
-            textAlign: 'center',
-          }}
-        >
-          <span style={{ fontSize: 24, marginBottom: 8 }}>🌲</span>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
-            Quiet out there
-          </span>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 4, lineHeight: 1.3 }}>
-            Your friends' adventures will appear here
-          </span>
-        </div>
-        {/* Mobile quiet state */}
-        <div
-          className="md:hidden flex items-center justify-center gap-2"
-          style={{
-            height: 48,
-            width: '100%',
-            background: 'rgba(15, 28, 53, 0.95)',
-          }}
-        >
-          <span style={{ fontSize: 14 }}>🌲</span>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
-            Quiet out there — your friends' adventures will appear here
-          </span>
-        </div>
-      </>
-    );
+  // No friend activity: show user's own map content (wishlist + recent visits)
+  if (!hasData) {
+    return <OwnContentRail onItemClick={onItemClick} selectedItemId={selectedItemId} />;
   }
 
   // Duplicate items for seamless loop
