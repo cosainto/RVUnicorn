@@ -165,6 +165,9 @@ export default function DiscoveryHub() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [undoToast, setUndoToast] = useState<{ name: string; itemId: string; itemType: 'campground' | 'place'; itemName: string } | null>(null);
+  const [kitchenTab, setKitchenTab] = useState<'my' | 'explore'>(() => {
+    try { return (localStorage.getItem('rvu-kitchen-tab') as 'my' | 'explore') || 'explore'; } catch { return 'explore'; }
+  });
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   const handleRemoveStop = useCallback(async (stopId: string, itemId: string, itemType: 'campground' | 'place', itemName: string) => {
@@ -227,6 +230,13 @@ export default function DiscoveryHub() {
   const dreamTrips: any[] = data?.dreamTrips || [];
   const seasonal = data?.seasonal;
   const campKitchen = data?.campKitchen;
+
+  // Default kitchen tab: My Recipes if user has saved recipes, otherwise Explore
+  useEffect(() => {
+    if (campKitchen?.savedCount > 0 && !localStorage.getItem('rvu-kitchen-tab')) {
+      setKitchenTab('my');
+    }
+  }, [campKitchen?.savedCount]);
 
   // Nothing to show at all
   if (!loading && trending.length === 0 && !becauseYouVisited && wishlist.length === 0 && !seasonal) return null;
@@ -513,130 +523,155 @@ export default function DiscoveryHub() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
-          SECTION 5: Camp Kitchen
+          SECTION 5: Camp Kitchen — tabbed gallery card
           ═══════════════════════════════════════════════════════════ */}
-      {campKitchen && campKitchen.featured && (
+      {campKitchen && (
         <div style={{ marginBottom: 20 }}>
-          <SectionHeader icon="🍳" title="Recipe of the Day" subtitle="Tonight's perfect meal after a day on the trail." />
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8, paddingLeft: 0 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: CN.gold, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              🍳 Camp Kitchen
+            </h3>
+            <Link to="/recipes" style={{ fontSize: 10, fontWeight: 700, color: CN.gold, textDecoration: 'none' }}>Browse all →</Link>
+          </div>
 
-          {/* Featured recipe card — body links to /recipes, CTA to detail */}
-          <Link to="/recipes" style={{
-            display: 'flex', margin: 0,
+          <div style={{
+            margin: 0,
             border: `3px solid ${CN.cream}`, borderRadius: 16,
             boxShadow: `4px 4px 0px ${CN.deep}`,
             background: `linear-gradient(135deg, ${CN.navy} 0%, rgba(232,98,42,0.04) 100%)`,
-            textDecoration: 'none', overflow: 'hidden',
-            transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease',
-            cursor: 'pointer',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `5px 6px 0px ${CN.deep}`; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `4px 4px 0px ${CN.deep}`; }}>
-            {campKitchen.featured.imageUrl ? (
-              <img src={campKitchen.featured.imageUrl} alt="" loading="lazy"
-                style={{ width: 82, height: 82, borderRadius: '13px 0 0 13px', objectFit: 'cover', flexShrink: 0 }} />
-            ) : (
-              /* SVG illustration variant by recipe category */
-              <div style={{
-                width: 82, height: 82, borderRadius: '13px 0 0 13px', flexShrink: 0,
-                background: `linear-gradient(135deg, ${CN.deep} 0%, #1a1235 50%, ${CN.navy} 100%)`,
-                position: 'relative', overflow: 'hidden',
-              }}>
-                {/* Steam wisps */}
-                <div className="steam-anim" style={{ position: 'absolute', top: 8, left: '30%', width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', animation: 'steam-rise 2.5s ease-in-out infinite' }} />
-                <div className="steam-anim" style={{ position: 'absolute', top: 12, left: '55%', width: 3, height: 3, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', animation: 'steam-rise 3s ease-in-out 0.8s infinite' }} />
-                {/* Campfire flames SVG */}
-                <svg viewBox="0 0 90 90" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                  {/* Glow */}
-                  <circle cx="45" cy="65" r="20" fill={CN.orange} opacity="0.15" />
-                  {/* Flame outer */}
-                  <path d="M45 25 C35 40, 28 55, 32 65 C34 72, 40 75, 45 75 C50 75, 56 72, 58 65 C62 55, 55 40, 45 25Z" fill={CN.orange} opacity="0.7" />
-                  {/* Flame inner */}
-                  <path d="M45 35 C40 45, 36 55, 38 62 C39 67, 42 70, 45 70 C48 70, 51 67, 52 62 C54 55, 50 45, 45 35Z" fill={CN.gold} opacity="0.9" />
-                  {/* Flame core */}
-                  <path d="M45 45 C43 50, 41 56, 42 60 C43 63, 44 65, 45 65 C46 65, 47 63, 48 60 C49 56, 47 50, 45 45Z" fill="#FFF3CD" opacity="0.8" />
-                  {/* Logs */}
-                  <rect x="28" y="72" width="34" height="5" rx="2.5" fill="#5C3D2E" />
-                  <rect x="30" y="68" width="30" height="5" rx="2.5" fill="#7A5033" transform="rotate(-8 45 70)" />
-                </svg>
-                {/* Category accent icon */}
-                <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 16, opacity: 0.7 }}>
-                  {(() => {
-                    const cat = (campKitchen.featured.category || '').toLowerCase();
-                    if (cat.includes('dutch')) return <svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="6" width="12" height="8" rx="2" fill={CN.gold} opacity="0.8"/><rect x="4" y="4" width="8" height="3" rx="1" fill={CN.gold} opacity="0.6"/><rect x="6" y="2" width="4" height="3" rx="1" fill={CN.gold} opacity="0.4"/></svg>;
-                    if (cat.includes('blackstone')) return <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="7" width="14" height="3" rx="1" fill={CN.muted} opacity="0.8"/><rect x="2" y="5" width="3" height="3" rx="1" fill="#CD7F32"/><rect x="7" y="4" width="4" height="4" rx="1" fill="#CD7F32"/></svg>;
-                    if (cat.includes('kids')) return <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="6" r="4" fill={CN.gold} opacity="0.7"/><path d="M3 14 C3 10, 6 8, 8 8 C10 8, 13 10, 13 14" fill={CN.gold} opacity="0.5"/></svg>;
-                    return <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 L6 6 L1 6 L5 9 L3.5 14 L8 11 L12.5 14 L11 9 L15 6 L10 6Z" fill={CN.gold} opacity="0.6"/></svg>;
-                  })()}
-                </div>
+            overflow: 'hidden',
+          }}>
+            {/* Header + tabs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
+              <div style={{ display: 'flex', gap: 4, background: CN.deep, borderRadius: 8, padding: 2 }}>
+                {[
+                  { id: 'my', label: 'My Recipes' },
+                  { id: 'explore', label: 'Explore' },
+                ].map(tab => (
+                  <button key={tab.id} onClick={() => {
+                    setKitchenTab(tab.id as 'my' | 'explore');
+                    try { localStorage.setItem('rvu-kitchen-tab', tab.id); } catch {}
+                  }}
+                    style={{
+                      fontSize: 10, fontWeight: 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      background: kitchenTab === tab.id ? CN.navy : 'transparent',
+                      color: kitchenTab === tab.id ? CN.gold : CN.muted,
+                    }}>
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-            )}
-            {/* Content row: info + watermark spacer */}
-            <div style={{ flex: 1, display: 'flex', gap: 12, minWidth: 0, padding: '8px 12px 8px 0' }}>
-              {/* Info */}
-              <div style={{ flex: 'none', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <h4 style={{ fontSize: 14, fontWeight: 700, color: CN.cream, marginBottom: 3, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {campKitchen.featured.title}
-                </h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', marginBottom: 4 }}>
-                  {campKitchen.featured.cookTime != null && (
-                    <span style={{ fontSize: 10, color: CN.muted }}>⏱ {campKitchen.featured.cookTime > 0 ? campKitchen.featured.cookTime + ' min' : 'No cook'}</span>
-                  )}
-                  {campKitchen.featured.difficulty && (
-                    <span style={{ fontSize: 10, color: CN.muted }}>· {campKitchen.featured.difficulty}</span>
-                  )}
-                </div>
-                {/* CTA — links to detail, stops propagation to prevent card nav */}
-                <Link to={`/recipes/${campKitchen.featured.id}`} onClick={e => e.stopPropagation()}
-                  style={{ fontSize: 11, fontWeight: 700, color: CN.orange, textDecoration: 'none' }}>
-                  Cook Tonight →
-                </Link>
+              <div style={{ flex: 1 }} />
+            </div>
+
+            {/* Tile gallery */}
+            <div style={{ display: 'flex', padding: '0 12px 12px' }}>
+              <div style={{
+                display: 'flex', gap: 10, flexShrink: 0,
+                overflowX: 'auto', scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch',
+              }}>
+                {kitchenTab === 'explore' ? (
+                  <>
+                    {/* Featured Recipe of the Day — first tile, badged */}
+                    {campKitchen.featured && (
+                      <Link to={`/recipes/${campKitchen.featured.id}`} className="group" style={{ flexShrink: 0, width: 130, textDecoration: 'none' }}>
+                        <div style={{
+                          width: 130, height: 90, borderRadius: 10, overflow: 'hidden', position: 'relative',
+                          border: `2px solid ${CN.orange}`,
+                          transition: 'transform 0.2s ease',
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
+                          {campKitchen.featured.imageUrl ? (
+                            <img src={campKitchen.featured.imageUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep}, #2D1B4E)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontSize: 28 }}>🍳</span>
+                            </div>
+                          )}
+                          <span style={{ position: 'absolute', top: 4, left: 4, fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: CN.orange, color: 'white' }}>⭐ Today</span>
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: CN.cream, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{campKitchen.featured.title}</p>
+                        <span style={{ fontSize: 9, color: CN.muted }}>{campKitchen.featured.cookTime > 0 ? `⏱ ${campKitchen.featured.cookTime} min` : '⏱ No cook'}</span>
+                      </Link>
+                    )}
+                    {/* Random editorial picks */}
+                    {(campKitchen.explore || []).map((r: any) => (
+                      <Link key={r.id} to={`/recipes/${r.id}`} className="group" style={{ flexShrink: 0, width: 130, textDecoration: 'none' }}>
+                        <div style={{ width: 130, height: 90, borderRadius: 10, overflow: 'hidden', border: `2px solid ${CN.border}`, transition: 'transform 0.2s ease' }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
+                          {r.imageUrl ? (
+                            <img src={r.imageUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep}, #1a1235)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontSize: 24 }}>{r.category?.includes('Dutch') ? '🏺' : r.category?.includes('Blackstone') ? '🥩' : r.category?.includes('Kids') ? '🧒' : '🔥'}</span>
+                            </div>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 11, fontWeight: 600, color: CN.cream, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</p>
+                        <span style={{ fontSize: 9, color: CN.muted }}>{r.cookTime > 0 ? `⏱ ${r.cookTime} min` : '⏱ No cook'}</span>
+                      </Link>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {/* My saved recipes */}
+                    {(campKitchen.saved || []).length > 0 ? (
+                      <>
+                        {(campKitchen.saved || []).slice(0, 5).map((r: any) => (
+                          <Link key={r.id} to={`/recipes/${r.id}`} className="group" style={{ flexShrink: 0, width: 130, textDecoration: 'none' }}>
+                            <div style={{ width: 130, height: 90, borderRadius: 10, overflow: 'hidden', border: `2px solid ${CN.border}`, transition: 'transform 0.2s ease' }}
+                              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03) translateY(-2px)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>
+                              {r.imageUrl ? (
+                                <img src={r.imageUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${CN.deep}, #1a1235)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <span style={{ fontSize: 24 }}>🍳</span>
+                                </div>
+                              )}
+                            </div>
+                            <p style={{ fontSize: 11, fontWeight: 600, color: CN.cream, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</p>
+                            <span style={{ fontSize: 9, color: CN.muted }}>{r.cookTime > 0 ? `⏱ ${r.cookTime} min` : '⏱ No cook'}</span>
+                          </Link>
+                        ))}
+                        {(campKitchen.saved || []).length > 5 && (
+                          <Link to="/recipes?tab=saved" style={{ flexShrink: 0, width: 130, height: 90, borderRadius: 10, background: CN.navyLight, border: `2px solid ${CN.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', gap: 4 }}>
+                            <span style={{ fontSize: 18, fontWeight: 700, color: CN.muted }}>+{(campKitchen.saved || []).length - 5}</span>
+                            <span style={{ fontSize: 9, color: CN.muted }}>more saved</span>
+                          </Link>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ padding: '12px 16px', textAlign: 'center', flex: 1 }}>
+                        <p className="text-xs" style={{ color: CN.muted }}>Save recipes you want to cook — tap the bookmark on any recipe</p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
-              {/* Watermark spacer — centered in remaining space */}
-              <div className="hidden lg:flex" style={{
-                flex: 1, minWidth: 0,
-                alignItems: 'center', justifyContent: 'center',
-                pointerEvents: 'none', overflow: 'hidden',
-              }}>
-                {/* Renders only if the asset exists — no broken image */}
-                <img src="/images/hitch-bbq-v1.png" alt=""
-                  style={{ width: 160, height: 160, objectFit: 'contain', opacity: 0.15, flexShrink: 0 }}
+              {/* Watermark spacer */}
+              <div className="hidden lg:flex" style={{ flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', overflow: 'hidden' }}>
+                <img src="/images/hitch-bbq-v1.png" alt="" style={{ width: 160, height: 160, objectFit: 'contain', opacity: 0.15, flexShrink: 0 }}
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               </div>
             </div>
-          </Link>
 
-          {/* Category chips */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingLeft: 0, overflowX: 'auto', paddingBottom: 4 }}>
-            {(campKitchen.categories || KITCHEN_CATEGORIES.map(c => c.label)).map((cat: string, i: number) => (
-              <Link key={i} to="/recipes" style={{
-                flexShrink: 0, padding: '6px 14px', borderRadius: 20,
-                border: `2px solid ${CN.border}`, background: CN.navyLight,
-                fontSize: 11, fontWeight: 600, color: CN.cream, textDecoration: 'none',
-                whiteSpace: 'nowrap',
-              }}>
-                {cat}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* If no camp kitchen data, show a minimal fallback */}
-      {(!campKitchen || !campKitchen.featured) && (
-        <div style={{ marginBottom: 20 }}>
-          <SectionHeader icon="🍳" title="Camp Kitchen" subtitle="Recipes made for the campfire" />
-          <div style={{ display: 'flex', gap: 6, paddingLeft: 0, overflowX: 'auto', paddingBottom: 4 }}>
-            {KITCHEN_CATEGORIES.map((cat, i) => (
-              <Link key={i} to="/recipes" style={{
-                flexShrink: 0, padding: '6px 14px', borderRadius: 20,
-                border: `2px solid ${CN.border}`, background: CN.navyLight,
-                fontSize: 11, fontWeight: 600, color: CN.cream, textDecoration: 'none',
-                whiteSpace: 'nowrap',
-              }}>
-                {cat.label}
-              </Link>
-            ))}
+            {/* Category chips */}
+            <div style={{ display: 'flex', gap: 6, padding: '0 12px 10px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {KITCHEN_CATEGORIES.map((cat, i) => (
+                <Link key={i} to="/recipes" style={{
+                  flexShrink: 0, padding: '4px 12px', borderRadius: 16,
+                  border: `1px solid ${CN.border}`, background: CN.navyLight,
+                  fontSize: 10, fontWeight: 600, color: CN.cream, textDecoration: 'none', whiteSpace: 'nowrap',
+                }}>
+                  {cat.label}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       )}

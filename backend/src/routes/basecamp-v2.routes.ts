@@ -1187,24 +1187,46 @@ router.get('/discovery', authenticateToken, async (req: any, res) => {
     try {
       const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
       let featuredRecipe = null;
+      let exploreRecipes: any[] = [];
+      let savedRecipes: any[] = [];
+
       try {
-        const recipes = await db.recipe.findMany({
+        const allEditorial = await db.recipe.findMany({
           where: { source: 'editorial' },
           select: { id: true, title: true, imageUrl: true, cookTime: true, category: true, difficulty: true },
-          take: 20,
+          take: 30,
         });
-        console.log('[Discovery] editorial recipes found:', recipes.length);
-        if (recipes.length > 0) {
-          featuredRecipe = recipes[dayOfYear % recipes.length];
+        if (allEditorial.length > 0) {
+          featuredRecipe = allEditorial[dayOfYear % allEditorial.length];
+          // Stable daily shuffle: use dayOfYear as seed for deterministic order
+          const shuffled = [...allEditorial].filter((r: any) => r.id !== featuredRecipe.id)
+            .sort((a: any, b: any) => {
+              const ha = ((dayOfYear * 31 + a.id.charCodeAt(0)) % 997);
+              const hb = ((dayOfYear * 31 + b.id.charCodeAt(0)) % 997);
+              return ha - hb;
+            });
+          exploreRecipes = shuffled.slice(0, 5);
         }
-      } catch (recipeErr: any) {
-        console.error('[Discovery] recipe query error:', recipeErr.message?.slice(0, 200));
-      }
+      } catch {}
 
-      campKitchen = featuredRecipe ? {
+      // User's saved recipes
+      try {
+        savedRecipes = await db.savedRecipe.findMany({
+          where: { userId },
+          include: { recipe: { select: { id: true, title: true, imageUrl: true, cookTime: true, category: true, difficulty: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+        });
+        savedRecipes = savedRecipes.map((s: any) => s.recipe).filter(Boolean);
+      } catch {}
+
+      campKitchen = {
         featured: featuredRecipe,
+        explore: exploreRecipes,
+        saved: savedRecipes,
+        savedCount: savedRecipes.length,
         categories: ['Dutch Oven', 'Blackstone', 'Quick Meals', 'Kids\' Favorites'],
-      } : null;
+      };
     } catch (e: any) {
       console.error('[Discovery] campKitchen error:', e.message);
     }
