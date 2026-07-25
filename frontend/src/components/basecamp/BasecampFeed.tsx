@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, ThumbsUp, Users, Sparkles, MapPin } from 'lucide-react';
 import api from '../../services/api';
-// GenieWishlistButton available for future feed card actions
+import RigPostFeedCard from '../feed/RigPostFeedCard';
 
 const CN = {
   bg: '#0F1C35', card: '#162236', cardAlt: '#1A2A45',
@@ -34,6 +34,11 @@ interface FeedItem {
   placeId?: string;
   placeName?: string;
   rigSlug?: string;
+  rigName?: string;
+  rigPhoto?: string;
+  rigId?: string;
+  photos?: string[];
+  postType?: string;
 }
 
 function timeAgo(date: string) {
@@ -282,9 +287,11 @@ export default function BasecampFeed() {
           </h3>
           {loading && [0, 1, 2].map(i => <div key={i} className="h-48 rounded-xl animate-pulse" style={{ background: CN.border }} />)}
           {/* Empty network: hide entirely per degradation rule */}
-          {!loading && networkItems.slice(0, visibleCount).map(item => (
-            <FeedCard key={item.postId} item={item} />
-          ))}
+          {!loading && networkItems.slice(0, visibleCount).map(item =>
+            item.type === 'rig-post' || item.type === 'rig-mod'
+              ? <RigPostFeedCard key={item.postId} item={item} />
+              : <FeedCard key={item.postId} item={item} />
+          )}
           {!loading && networkItems.length > visibleCount && (
             <button onClick={() => setVisibleCount(v => v + 10)}
               className="w-full py-2 text-xs font-semibold rounded-xl" style={{ background: CN.cardAlt, color: CN.gold, border: `1px solid ${CN.border}` }}>
@@ -314,7 +321,11 @@ export default function BasecampFeed() {
           <div className="p-3 space-y-3">
             {loading && [0, 1, 2].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: CN.border }} />)}
             {/* Empty tabs: hide content entirely per degradation rule */}
-            {!loading && visible.map(item => <FeedCard key={item.postId} item={item} />)}
+            {!loading && visible.map(item =>
+              item.type === 'rig-post' || item.type === 'rig-mod'
+                ? <RigPostFeedCard key={item.postId} item={item} />
+                : <FeedCard key={item.postId} item={item} />
+            )}
             {!loading && feedItems.length > visibleCount && (
               <button onClick={() => setVisibleCount(v => v + 10)}
                 className="w-full py-2 text-xs font-semibold rounded-lg" style={{ background: CN.cardAlt, color: CN.gold }}>
