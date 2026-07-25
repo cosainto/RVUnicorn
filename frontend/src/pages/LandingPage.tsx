@@ -240,15 +240,8 @@ function HeroSection() {
             </a>
 
             {/* Mascot */}
-            <div style={{
-              margin: '2rem auto 0', maxWidth: '60vw',
-              border: `3px dashed ${C.border}`, borderRadius: 24,
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', padding: 24, aspectRatio: '4/3',
-              background: 'rgba(255,255,255,0.03)',
-            }}>
-              <span style={{ fontSize: 64 }}>🚐</span>
-            </div>
+            <img src="/hitch.png" alt="Hitch the RV Unicorn roasting marshmallows by a campfire"
+              style={{ margin: '2rem auto 0', maxWidth: '60vw', borderRadius: 24 }} />
           </div>
         </>
       ) : (
@@ -279,17 +272,10 @@ function HeroSection() {
             </div>
           </div>
 
-          {/* Right — hero art placeholder */}
+          {/* Right — hero art */}
           <div className="flex justify-center">
-            <div style={{
-              width: '100%', maxWidth: 480, aspectRatio: '4/3',
-              border: `3px dashed ${C.border}`, borderRadius: 24,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(255,255,255,0.03)',
-            }}>
-              <span style={{ fontSize: 64 }}>🚐</span>
-              <p className="text-xs mt-3" style={{ color: C.muted }}>Hero illustration: family around campfire with RV in background, cartoon cel-shaded style</p>
-            </div>
+            <img src="/hitch.png" alt="Hitch the RV Unicorn roasting marshmallows by a campfire"
+              style={{ width: '100%', maxWidth: 480, borderRadius: 24 }} />
           </div>
         </div>
       )}
