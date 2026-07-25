@@ -1,7 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'child_process'
+
+const gitSha = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim(); }
+  catch { return Date.now().toString(); }
+})();
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_BUILD_ID': JSON.stringify(gitSha),
+  },
   plugins: [react()],
   build: {
     rollupOptions: {
