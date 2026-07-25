@@ -317,7 +317,7 @@ function RigPageProof() {
 
         {/* Right — phone-framed screenshot */}
         <div className="flex flex-col items-center">
-          <div className="max-w-[320px] mx-auto rounded-[2rem] overflow-hidden ring-1 ring-[#C9A84C]/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)]">
+          <div className="max-w-[400px] mx-auto rounded-[2rem] overflow-hidden ring-1 ring-[#C9A84C]/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)]">
             <img src="/images/landing/rig-page-preview.png" alt="Example rig page showing miles, states, and trip photos" className="block w-full h-auto" />
           </div>
           <p className="text-xs text-white/40 text-center mt-3">Example rig page</p>
