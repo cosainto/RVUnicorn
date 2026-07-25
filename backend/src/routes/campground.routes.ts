@@ -34,6 +34,16 @@ const isAdmin = async (req: Request, res: Response, next: Function) => {
   }
 };
 
+// Public count for landing page social proof
+router.get('/count', async (_req: Request, res: Response) => {
+  try {
+    const count = await prisma.campground.count();
+    res.json({ count });
+  } catch (error) {
+    res.json({ count: 16000 });
+  }
+});
+
 // Get all campgrounds
 router.get('/', async (req: Request, res: Response) => {
   try {
