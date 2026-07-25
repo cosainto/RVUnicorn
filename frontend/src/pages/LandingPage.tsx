@@ -166,11 +166,11 @@ function HeroSection() {
           </h1>
           <SquiggleUnderline width={200} />
 
-          <p className="mt-6 text-lg md:text-xl leading-relaxed" style={{ color: C.muted, maxWidth: 500 }}>
+          <p className="mt-6 text-lg md:text-xl leading-relaxed mx-auto md:mx-0" style={{ color: C.muted, maxWidth: 500 }}>
             Plan your next trip, track where you've been, remember every campfire moment, and connect with a community that gets the RV life.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center md:items-start">
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center md:justify-start">
             <Link to="/register" style={cartoonButton(true)}
               className="hover:scale-105 active:scale-95 inline-block"
               onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05) rotate(-1deg)'; }}
