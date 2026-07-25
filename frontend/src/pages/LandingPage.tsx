@@ -350,13 +350,13 @@ const FEATURES = [
     rotation: -0.5,
   },
   {
-    icon: '🏕️', title: 'Campgrounds & Places',
+    icon: 'campgrounds-image', title: 'Campgrounds & Places',
     hook: '16,000+ campgrounds with real RVer reviews.',
     copy: 'Find the best sites with community ratings, nearby restaurants, trails, and attractions. Discover places other campers love.',
     rotation: 1.5,
   },
   {
-    icon: '🤖', title: 'Hitch AI',
+    icon: 'hitch-ai-image', title: 'Hitch AI',
     hook: 'Your campfire copilot.',
     copy: 'Ask Hitch anything — campground recommendations, trip ideas, RV tips, or just a good campfire story. Always riding shotgun.',
     rotation: -1,
@@ -389,6 +389,10 @@ function FeatureCards() {
                 <img src="/images/landing/rig-page-preview.png" alt="Rig page preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
               ) : f.icon === 'travel-map-image' ? (
                 <img src="/images/landing/travel-map-preview.png" alt="Travel map preview" className="w-10 h-10 rounded-lg object-cover mb-3 ring-1 ring-white/10" />
+              ) : f.icon === 'hitch-ai-image' ? (
+                <img src="/images/landing/hitch-ai-preview.png" alt="Hitch AI chat preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+              ) : f.icon === 'campgrounds-image' ? (
+                <img src="/images/landing/campgrounds-preview.png" alt="Campground listing preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
               ) : (
                 <span className="text-4xl block mb-3">{f.icon}</span>
               )}
