@@ -292,6 +292,42 @@ function HeroSection() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   SECTION 1.5 — EVERY RIG GETS ITS OWN PAGE (product proof)
+   ══════════════════════════════════════════════════════════════════ */
+function RigPageProof() {
+  return (
+    <section className="py-20 md:py-28" style={{ background: C.navy }}>
+      <div className="max-w-[1280px] mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+        {/* Left — copy */}
+        <div>
+          <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 700, color: 'white' }}>
+            Every Rig Gets Its Own Page
+          </h2>
+          <SquiggleUnderline width={180} />
+          <ul className="mt-8 space-y-4">
+            {[
+              'Track miles, states, and nights automatically.',
+              'Every trip and photo, in one place.',
+              'Build a following, or keep it private.',
+            ].map((line) => (
+              <li key={line} className="text-base leading-relaxed" style={{ color: C.muted }}>{line}</li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Right — phone-framed screenshot */}
+        <div className="flex flex-col items-center">
+          <div className="max-w-[320px] mx-auto rounded-[2rem] overflow-hidden ring-1 ring-[#C9A84C]/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)]">
+            <img src="/images/landing/rig-page-preview.png" alt="Example rig page showing miles, states, and trip photos" className="block w-full h-auto" />
+          </div>
+          <p className="text-xs text-white/40 text-center mt-3">Example rig page</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SECTION 2 — FEATURE CARDS (5 sticker cards)
    ══════════════════════════════════════════════════════════════════ */
 const FEATURES = [
@@ -308,7 +344,7 @@ const FEATURES = [
     rotation: 1,
   },
   {
-    icon: '🚐', title: 'Rig Profiles',
+    icon: 'rig-image', title: 'Rig Profiles',
     hook: 'Your rig\'s story, told in photos and adventures.',
     copy: 'A living journal for your RV — mods, maintenance logs, trip recaps, and a follower feed. Track your rig\'s health milestones.',
     rotation: -0.5,
@@ -349,7 +385,11 @@ function FeatureCards() {
               }}
               onMouseEnter={e => { Object.assign(e.currentTarget.style, stickerHover); }}
               onMouseLeave={e => { e.currentTarget.style.transform = `rotate(${f.rotation}deg)`; e.currentTarget.style.boxShadow = `5px 5px 0px ${C.navyDeep}`; }}>
-              <span className="text-4xl block mb-3">{f.icon}</span>
+              {f.icon === 'rig-image' ? (
+                <img src="/images/landing/rig-page-preview.png" alt="Rig page preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+              ) : (
+                <span className="text-4xl block mb-3">{f.icon}</span>
+              )}
               <h3 className="text-lg font-bold mb-1" style={{ color: C.cream, fontFamily: "'Fredoka', sans-serif" }}>{f.title}</h3>
               <p className="text-sm font-semibold mb-2" style={{ color: C.gold }}>{f.hook}</p>
               <p className="text-xs leading-relaxed" style={{ color: C.muted }}>{f.copy}</p>
@@ -532,6 +572,7 @@ export default function LandingPage() {
 
       <Navbar />
       <HeroSection />
+      <RigPageProof />
       <FeatureCards />
       <WaveDivider flip color={C.navyDeep} />
       <FoundingMember />
