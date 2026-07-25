@@ -251,7 +251,7 @@ function HeroSection() {
         <div data-hero-grid className="max-w-[1280px] mx-auto px-6 py-32 md:py-20 grid md:grid-cols-2 gap-12 items-center min-h-[80vh] w-full">
           {/* Left — copy */}
           <div className="text-center md:text-left">
-            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(2.8rem, 6.5vw, 4.5rem)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
               Your Camping Life,<br />
               <span style={{ color: C.gold }}>All in One Place.</span>
             </h1>
