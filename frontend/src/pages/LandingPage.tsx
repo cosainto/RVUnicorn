@@ -520,32 +520,9 @@ function FinalCTA() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   DEBUG BEACON — only visible with ?debug=1
-   ══════════════════════════════════════════════════════════════════ */
-function DebugBeacon() {
-  const [info, setInfo] = useState('measuring...');
-  useEffect(() => {
-    const g = document.querySelector('[data-hero-grid]');
-    setInfo([
-      `iw=${window.innerWidth}`,
-      `cols=${g ? getComputedStyle(g).gridTemplateColumns : 'GRID NOT FOUND'}`,
-      `scrollW=${document.documentElement.scrollWidth}`,
-      `sw=${navigator.serviceWorker?.controller ? 'CONTROLLED' : 'none'}`,
-      `build=${import.meta.env.VITE_BUILD_ID ?? 'unset'}`,
-    ].join(' | '));
-  }, []);
-  return (
-    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 99999,
-      background: '#000', color: '#0f0', font: '11px monospace', padding: '6px',
-      wordBreak: 'break-all' }}>{info}</div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════
    MAIN PAGE
    ══════════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
-  const showDebug = new URLSearchParams(window.location.search).get('debug') === '1';
   return (
     <>
       <Helmet>
@@ -568,7 +545,6 @@ export default function LandingPage() {
       <FoundingMember />
       <SocialProofStrip />
       <FinalCTA />
-      {showDebug && <DebugBeacon />}
     </>
   );
 }
