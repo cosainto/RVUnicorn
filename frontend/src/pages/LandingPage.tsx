@@ -240,8 +240,11 @@ function HeroSection() {
             </a>
 
             {/* Mascot */}
-            <img src="/hitch.png" alt="Hitch the RV Unicorn roasting marshmallows by a campfire"
-              style={{ margin: '2rem auto 0', maxWidth: '60vw', borderRadius: 24 }} />
+            <div className="overflow-hidden rounded-2xl ring-1 ring-[#C9A84C]/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6),0_0_80px_-20px_rgba(232,98,42,0.25)]"
+              style={{ margin: '2rem auto 0', maxWidth: '60vw' }}>
+              <img src="/hitch.png" alt="Hitch the RV Unicorn roasting marshmallows by a campfire"
+                className="block w-full h-auto" />
+            </div>
           </div>
         </>
       ) : (
@@ -274,8 +277,11 @@ function HeroSection() {
 
           {/* Right — hero art */}
           <div className="flex justify-center">
-            <img src="/hitch.png" alt="Hitch the RV Unicorn roasting marshmallows by a campfire"
-              style={{ width: '100%', maxWidth: 480, borderRadius: 24 }} />
+            <div className="overflow-hidden rounded-2xl ring-1 ring-[#C9A84C]/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6),0_0_80px_-20px_rgba(232,98,42,0.25)]"
+              style={{ width: '100%', maxWidth: 480 }}>
+              <img src="/hitch.png" alt="Hitch the RV Unicorn roasting marshmallows by a campfire"
+                className="block w-full h-auto" />
+            </div>
           </div>
         </div>
       )}
