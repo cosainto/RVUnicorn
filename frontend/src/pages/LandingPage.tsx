@@ -332,9 +332,9 @@ function RigPageProof() {
    ══════════════════════════════════════════════════════════════════ */
 const FEATURES = [
   {
-    icon: '🗺️', title: 'Travel Map',
-    hook: 'See everywhere you\'ve been — and where you\'re going.',
-    copy: 'Your camping history painted across a live map. Track states visited, nights camped, and miles driven with your rig.',
+    icon: 'travel-map-image', title: 'Travel Map',
+    hook: 'See where you\'ve been — and where your friends are camping.',
+    copy: 'Your camping journey comes to life on a live map. Track the states you\'ve visited, nights camped, and miles traveled with your rig, while also seeing where your friends are camping across the country.',
     rotation: -1.5,
   },
   {
@@ -387,6 +387,8 @@ function FeatureCards() {
               onMouseLeave={e => { e.currentTarget.style.transform = `rotate(${f.rotation}deg)`; e.currentTarget.style.boxShadow = `5px 5px 0px ${C.navyDeep}`; }}>
               {f.icon === 'rig-image' ? (
                 <img src="/images/landing/rig-page-preview.png" alt="Rig page preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+              ) : f.icon === 'travel-map-image' ? (
+                <img src="/images/landing/travel-map-preview.png" alt="Travel map preview" className="w-10 h-10 rounded-lg object-cover mb-3 ring-1 ring-white/10" />
               ) : (
                 <span className="text-4xl block mb-3">{f.icon}</span>
               )}
