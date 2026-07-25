@@ -1,37 +1,40 @@
 // RVUnicorn Service Worker — PWA + Push
-const CACHE_NAME = 'rvunicorn-v1';
-const PRECACHE = ['/', '/images/Logo_RVUnicorn.png'];
+const CACHE_NAME = 'rvunicorn-v2';
 
-// Install — cache shell
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
-  );
-});
+// Install — skip waiting immediately so new SW takes over
+self.addEventListener('install', () => self.skipWaiting());
 
-// Activate — clean old caches
+// Activate — clean old caches, claim clients
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(names => Promise.all(
       names.filter(n => n !== CACHE_NAME).map(n => caches.delete(n))
-    )).then(() => clients.claim())
+    )).then(() => self.clients.claim())
   );
 });
 
-// Fetch — network first, fallback to cache
+// Fetch — only cache hashed assets (/assets/*), never HTML
 self.addEventListener('fetch', (e) => {
-  // Skip non-GET and API requests
-  if (e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+  if (e.request.method !== 'GET') return;
+  if (e.request.url.includes('/api/')) return;
+
+  // Navigation requests (HTML pages) — always network, never cache
+  if (e.request.mode === 'navigate') return;
+
+  // Only cache files under /assets/ (hashed, immutable bundles)
+  if (!e.request.url.includes('/assets/')) return;
 
   e.respondWith(
-    fetch(e.request).then(response => {
-      // Cache successful responses
-      if (response.ok) {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-      }
-      return response;
-    }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/')))
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
+        return response;
+      });
+    })
   );
 });
 
@@ -44,8 +47,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'RVUnicorn \u{1F984}';
   const options = {
     body: data.body || '',
-    icon: data.icon || '/images/Logo_RVUnicorn.png',
-    badge: data.badge || '/images/Logo_RVUnicorn.png',
+    icon: data.icon || '/images/logo-icon-v2.png',
+    badge: data.badge || '/images/logo-icon-v2.png',
     data: { url: data.url || '/' },
     vibrate: [200, 100, 200],
   };
@@ -57,14 +60,14 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.navigate(url);
           return client.focus();
         }
       }
-      if (clients.openWindow) return clients.openWindow(url);
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     })
   );
 });
