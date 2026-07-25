@@ -147,56 +147,152 @@ function Navbar() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   WIDTH HOOK — JS-based breakpoint, no Tailwind md: dependency
+   ══════════════════════════════════════════════════════════════════ */
+function useIsNarrow(breakpoint = 768) {
+  const [narrow, setNarrow] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const onResize = () => setNarrow(window.innerWidth < breakpoint);
+    onResize();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, [breakpoint]);
+  return narrow;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    SECTION 1 — HERO
    ══════════════════════════════════════════════════════════════════ */
 function HeroSection() {
+  const narrow = useIsNarrow();
+
+  useEffect(() => {
+    if (!narrow) return;
+    document.documentElement.style.overflowX = 'hidden';
+    document.body.style.overflowX = 'hidden';
+    return () => {
+      document.documentElement.style.overflowX = '';
+      document.body.style.overflowX = '';
+    };
+  }, [narrow]);
+
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden" style={{ background: `linear-gradient(135deg, ${C.navyDeep} 0%, ${C.navy} 50%, ${C.navyLight} 100%)` }}>
+    <section className="relative min-h-[90vh] flex items-center overflow-hidden" style={{
+      background: `linear-gradient(135deg, ${C.navyDeep} 0%, ${C.navy} 50%, ${C.navyLight} 100%)`,
+      ...(narrow ? { flexDirection: 'column' as const, alignItems: 'stretch' } : {}),
+    }}>
       {/* Decorative sparks */}
       <SparkStar className="absolute top-24 left-[10%] opacity-30 animate-pulse" />
       <SparkStar className="absolute top-40 right-[15%] opacity-20 animate-pulse" />
       <SparkStar className="absolute bottom-32 left-[25%] opacity-25 animate-pulse" />
 
-      <div data-hero-grid className="max-w-7xl mx-auto px-6 py-32 md:py-20 grid md:grid-cols-2 gap-12 items-center w-full">
-        {/* Left — copy */}
-        <div className="text-center md:text-left">
-          <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
-            Your Camping Life,<br />
-            <span style={{ color: C.gold }}>All in One Place.</span>
-          </h1>
-          <SquiggleUnderline width={200} />
+      {narrow ? (
+        <>
+          <style>{`
+            [data-mobile-hero] { width: 100% !important; max-width: 100% !important;
+              display: flex !important; flex-direction: column !important;
+              align-items: center !important; text-align: center !important; }
+            [data-mobile-hero] > * { max-width: 100% !important;
+              margin-left: auto !important; margin-right: auto !important; }
+          `}</style>
+          <div data-mobile-hero data-hero-grid style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            width: '100%', maxWidth: '100%', boxSizing: 'border-box',
+            padding: '3rem 1.25rem', textAlign: 'center',
+          }}>
+            <h1 style={{
+              fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(2.2rem, 8vw, 3rem)',
+              fontWeight: 700, color: 'white', lineHeight: 1.1,
+              width: '100%', margin: '0 auto',
+            }}>
+              Your Camping Life, <span style={{ color: C.gold }}>All in One Place.</span>
+            </h1>
+            <SquiggleUnderline width={200} />
 
-          <p className="mt-6 text-lg md:text-xl leading-relaxed mx-auto md:mx-0" style={{ color: C.muted, maxWidth: 500 }}>
-            Plan your next trip, track where you've been, remember every campfire moment, and connect with a community that gets the RV life.
-          </p>
+            <p style={{
+              color: C.muted, maxWidth: '32rem', margin: '1.5rem auto 0',
+              fontSize: 16, lineHeight: 1.6,
+            }}>
+              Plan your next trip, track where you've been, remember every campfire moment, and connect with a community that gets the RV life.
+            </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center md:justify-start">
-            <Link to="/register" style={cartoonButton(true)}
-              className="hover:scale-105 active:scale-95 inline-block"
-              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05) rotate(-1deg)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}>
+            <Link to="/register" style={{
+              ...cartoonButton(true),
+              display: 'block', width: '100%', maxWidth: '20rem',
+              margin: '2rem auto 0', textAlign: 'center', fontSize: 16,
+            }}>
               Join RVUnicorn — It's Free
             </Link>
-            <a href="#features" className="text-sm font-medium underline underline-offset-4" style={{ color: C.gold }}
-              onClick={e => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}>
-              Explore Features ↓
-            </a>
-          </div>
-        </div>
 
-        {/* Right — hero art placeholder */}
-        <div className="flex justify-center">
-          <div style={{
-            width: '100%', maxWidth: 480, aspectRatio: '4/3',
-            border: `3px dashed ${C.border}`, borderRadius: 24,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(255,255,255,0.03)',
-          }}>
-            <span style={{ fontSize: 64 }}>🚐</span>
-            <p className="text-xs mt-3" style={{ color: C.muted }}>Hero illustration: family around campfire with RV in background, cartoon cel-shaded style</p>
+            <a href="#features" style={{
+              color: C.gold, display: 'block', margin: '1rem auto 0',
+              fontSize: 14, fontWeight: 500, textDecoration: 'underline',
+              textUnderlineOffset: 4,
+            }}
+              onClick={e => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}>
+              Explore Features
+            </a>
+
+            {/* Mascot */}
+            <div style={{
+              margin: '2rem auto 0', maxWidth: '60vw',
+              border: `3px dashed ${C.border}`, borderRadius: 24,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', padding: 24, aspectRatio: '4/3',
+              background: 'rgba(255,255,255,0.03)',
+            }}>
+              <span style={{ fontSize: 64 }}>🚐</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div data-hero-grid className="max-w-7xl mx-auto px-6 py-32 md:py-20 grid md:grid-cols-2 gap-12 items-center w-full">
+          {/* Left — copy */}
+          <div className="text-center md:text-left">
+            <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 700, color: 'white', lineHeight: 1.1 }}>
+              Your Camping Life,<br />
+              <span style={{ color: C.gold }}>All in One Place.</span>
+            </h1>
+            <SquiggleUnderline width={200} />
+
+            <p className="mt-6 text-lg md:text-xl leading-relaxed mx-auto md:mx-0" style={{ color: C.muted, maxWidth: 500 }}>
+              Plan your next trip, track where you've been, remember every campfire moment, and connect with a community that gets the RV life.
+            </p>
+
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center md:justify-start">
+              <Link to="/register" style={cartoonButton(true)}
+                className="hover:scale-105 active:scale-95 inline-block"
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05) rotate(-1deg)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}>
+                Join RVUnicorn — It's Free
+              </Link>
+              <a href="#features" className="text-sm font-medium underline underline-offset-4" style={{ color: C.gold }}
+                onClick={e => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}>
+                Explore Features ↓
+              </a>
+            </div>
+          </div>
+
+          {/* Right — hero art placeholder */}
+          <div className="flex justify-center">
+            <div style={{
+              width: '100%', maxWidth: 480, aspectRatio: '4/3',
+              border: `3px dashed ${C.border}`, borderRadius: 24,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.03)',
+            }}>
+              <span style={{ fontSize: 64 }}>🚐</span>
+              <p className="text-xs mt-3" style={{ color: C.muted }}>Hero illustration: family around campfire with RV in background, cartoon cel-shaded style</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <WaveDivider color={C.navy} />
     </section>
