@@ -578,8 +578,8 @@ export default function LandingPage() {
 
       <Navbar />
       <HeroSection />
-      <RigPageProof />
       <FeatureCards />
+      <RigPageProof />
       <WaveDivider flip color={C.navyDeep} />
       <FoundingMember />
       <SocialProofStrip />
