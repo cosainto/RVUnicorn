@@ -326,7 +326,7 @@ const FEATURES = [
     rotation: -1,
   },
   {
-    icon: 'rig-page-image', title: 'Every Rig Gets Its Own Page',
+    icon: 'rig-page-image', title: 'Your RV\'s Complete Digital Logbook',
     hook: 'Keep every detail about your RV in one place.',
     copy: 'Upload mechanic invoices, track maintenance history, set service reminders, log fuel economy, and store your RV\'s specs, tank capacities, tire sizes, and travel stats — so you\'re always ready for your next adventure.',
     rotation: 0.5,
