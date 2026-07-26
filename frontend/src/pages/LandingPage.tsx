@@ -327,8 +327,8 @@ const FEATURES = [
   },
   {
     icon: 'rig-page-image', title: 'Every Rig Gets Its Own Page',
-    hook: 'Built automatically as you travel.',
-    copy: 'Miles, states, and nights track themselves. Every trip and photo lands in one place. Share it with a following — or keep it private.',
+    hook: 'Keep every detail about your RV in one place.',
+    copy: 'Upload mechanic invoices, track maintenance history, set service reminders, log fuel economy, and store your RV\'s specs, tank capacities, tire sizes, and travel stats — so you\'re always ready for your next adventure.',
     rotation: 0.5,
   },
 ];
