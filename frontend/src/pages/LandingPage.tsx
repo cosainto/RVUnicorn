@@ -292,43 +292,7 @@ function HeroSection() {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   SECTION 1.5 — EVERY RIG GETS ITS OWN PAGE (product proof)
-   ══════════════════════════════════════════════════════════════════ */
-function RigPageProof() {
-  return (
-    <section className="py-20 md:py-28" style={{ background: C.navy }}>
-      <div className="max-w-[1280px] mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-        {/* Left — copy */}
-        <div>
-          <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 700, color: 'white' }}>
-            Every Rig Gets Its Own Page
-          </h2>
-          <SquiggleUnderline width={180} />
-          <ul className="mt-8 space-y-4">
-            {[
-              'Track miles, states, and nights automatically.',
-              'Every trip and photo, in one place.',
-              'Build a following, or keep it private.',
-            ].map((line) => (
-              <li key={line} className="text-base leading-relaxed" style={{ color: C.muted }}>{line}</li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Right — phone-framed screenshot */}
-        <div className="flex flex-col items-center">
-          <div className="max-w-[400px] mx-auto rounded-[2rem] overflow-hidden ring-1 ring-[#C9A84C]/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)]">
-            <img src="/images/landing/rig-page-preview.png" alt="Example rig page showing miles, states, and trip photos" className="block w-full h-auto" />
-          </div>
-          <p className="text-xs text-white/40 text-center mt-3">Example rig page</p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   SECTION 2 — FEATURE CARDS (5 sticker cards)
+   SECTION 2 — FEATURE CARDS (6 sticker cards)
    ══════════════════════════════════════════════════════════════════ */
 const FEATURES = [
   {
@@ -361,6 +325,12 @@ const FEATURES = [
     copy: 'Ask Hitch anything — campground recommendations, trip ideas, RV tips, or just a good campfire story. Always riding shotgun.',
     rotation: -1,
   },
+  {
+    icon: 'rig-page-image', title: 'Every Rig Gets Its Own Page',
+    hook: 'Built automatically as you travel.',
+    copy: 'Miles, states, and nights track themselves. Every trip and photo lands in one place. Share it with a following — or keep it private.',
+    rotation: 0.5,
+  },
 ];
 
 function FeatureCards() {
@@ -391,6 +361,8 @@ function FeatureCards() {
                 <img src="/images/landing/travel-map-preview.png" alt="Travel map preview" className="w-10 h-10 rounded-lg object-cover mb-3 ring-1 ring-white/10" />
               ) : f.icon === 'hitch-ai-image' ? (
                 <img src="/images/landing/hitch-ai-preview.png" alt="Hitch AI chat preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+              ) : f.icon === 'rig-page-image' ? (
+                <img src="/images/landing/rig-page-preview.png" alt="" className="w-full aspect-[16/10] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'campgrounds-image' ? (
                 <img src="/images/landing/campgrounds-preview.png" alt="Campground listing preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
               ) : (
@@ -579,7 +551,6 @@ export default function LandingPage() {
       <Navbar />
       <HeroSection />
       <FeatureCards />
-      <RigPageProof />
       <WaveDivider flip color={C.navyDeep} />
       <FoundingMember />
       <SocialProofStrip />
