@@ -302,7 +302,7 @@ const FEATURES = [
     rotation: -1.5,
   },
   {
-    icon: '📋', title: 'Trip Planner',
+    icon: 'trip-planner-image', title: 'Trip Planner',
     hook: 'Plan smarter with campground intel.',
     copy: 'Build multi-stop trips with drive times, campground details, and packing checklists. Hitch AI suggests stops you\'ll love.',
     rotation: 1,
@@ -361,6 +361,8 @@ function FeatureCards() {
                 <img src="/images/landing/travel-map-preview.png" alt="Travel map preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'hitch-ai-image' ? (
                 <img src="/images/landing/hitch-ai-preview.png" alt="Hitch AI chat preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
+              ) : f.icon === 'trip-planner-image' ? (
+                <img src="/images/landing/trip-planner-preview.png" alt="Trip planner preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'rig-page-image' ? (
                 <img src="/images/landing/rig-page-preview.png" alt="" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'campgrounds-image' ? (
