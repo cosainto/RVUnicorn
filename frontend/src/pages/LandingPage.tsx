@@ -346,7 +346,7 @@ function FeatureCards() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-14">
           {FEATURES.map((f, i) => (
             <div key={f.title}
-              className="p-6 cursor-default group"
+              className="p-6 cursor-default group flex flex-col"
               style={{
                 ...stickerCard(f.rotation),
                 opacity: inView ? 1 : 0,
@@ -362,7 +362,7 @@ function FeatureCards() {
               ) : f.icon === 'hitch-ai-image' ? (
                 <img src="/images/landing/hitch-ai-preview.png" alt="Hitch AI chat preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
               ) : f.icon === 'rig-page-image' ? (
-                <img src="/images/landing/rig-page-preview.png" alt="" className="w-full aspect-[16/10] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
+                <img src="/images/landing/rig-page-preview.png" alt="" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'campgrounds-image' ? (
                 <img src="/images/landing/campgrounds-preview.png" alt="Campground listing preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
               ) : (
