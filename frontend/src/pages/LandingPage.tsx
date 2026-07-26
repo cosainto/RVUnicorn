@@ -345,8 +345,8 @@ const FEATURES = [
   },
   {
     icon: 'rig-image', title: 'Rig Profiles',
-    hook: 'Your rig\'s story, told in photos and adventures.',
-    copy: 'A living journal for your RV — mods, maintenance logs, trip recaps, and a follower feed. Track your rig\'s health milestones.',
+    hook: 'Every number you can never remember — in one place.',
+    copy: 'Tire sizes, tank capacities, towing MPG — in one place you can pull up at the parts counter. Log mods, repairs, and fill-ups as you go. Your rig\'s whole life, finally written down.',
     rotation: -0.5,
   },
   {
