@@ -364,7 +364,7 @@ function FeatureCards() {
               ) : f.icon === 'trip-planner-image' ? (
                 <img src="/images/landing/trip-planner-preview.png" alt="Trip planner preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'rig-page-image' ? (
-                <img src="/images/landing/rig-page-preview.png" alt="" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
+                <img src="/images/landing/rig-logbook-preview.png" alt="" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'campgrounds-image' ? (
                 <img src="/images/landing/campgrounds-preview.png" alt="Campground listing preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : (
