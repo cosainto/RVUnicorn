@@ -356,15 +356,15 @@ function FeatureCards() {
               onMouseEnter={e => { Object.assign(e.currentTarget.style, stickerHover); }}
               onMouseLeave={e => { e.currentTarget.style.transform = `rotate(${f.rotation}deg)`; e.currentTarget.style.boxShadow = `5px 5px 0px ${C.navyDeep}`; }}>
               {f.icon === 'rig-image' ? (
-                <img src="/images/landing/rig-page-preview.png" alt="Rig page preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+                <img src="/images/landing/rig-page-preview.png" alt="Rig page preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'travel-map-image' ? (
-                <img src="/images/landing/travel-map-preview.png" alt="Travel map preview" className="w-10 h-10 rounded-lg object-cover mb-3 ring-1 ring-white/10" />
+                <img src="/images/landing/travel-map-preview.png" alt="Travel map preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'hitch-ai-image' ? (
-                <img src="/images/landing/hitch-ai-preview.png" alt="Hitch AI chat preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+                <img src="/images/landing/hitch-ai-preview.png" alt="Hitch AI chat preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'rig-page-image' ? (
                 <img src="/images/landing/rig-page-preview.png" alt="" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : f.icon === 'campgrounds-image' ? (
-                <img src="/images/landing/campgrounds-preview.png" alt="Campground listing preview" className="w-10 h-10 rounded-lg object-cover object-top mb-3 ring-1 ring-white/10" />
+                <img src="/images/landing/campgrounds-preview.png" alt="Campground listing preview" className="w-full aspect-[2/1] object-cover object-top rounded-lg ring-1 ring-[#C9A84C]/25 mb-3" />
               ) : (
                 <span className="text-4xl block mb-3">{f.icon}</span>
               )}
